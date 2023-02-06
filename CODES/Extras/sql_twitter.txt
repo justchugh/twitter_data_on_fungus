@@ -58,6 +58,18 @@ else 0
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
 
+-- Attempting a different approach by creating a new view for aggregated sentiments
+create view tweet_sentiments as 
+select
+id,
+tweet,
+sum(polarity) as tweet_sentiment
+from temp_3
+group by id, tweet;
+
+-- Checking the sentiment analysis result
+SELECT * FROM tweet_sentiments limit 25;
+
 CREATE EXTERNAL TABLE covid_tweets
 (
 id BIGINT,    
@@ -111,3 +123,6 @@ case s_d.polarity
             else 0 
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
+
+-- Checking the sentiment analysis result
+SELECT * FROM temp_3 limit 25;
