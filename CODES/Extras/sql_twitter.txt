@@ -72,48 +72,17 @@ retweet_count INT,
 tweet_date STRING
 );
 
-create view temp_1 as 
-select 
-id,
-covid_tweets_exp.tweet,
-words 
-from covid_tweets_exp 
-lateral view explode(sentences(lower(tweet))) dummy as words;
-
-create view temp_2 as select 
-id,
-temp_1.tweet, 
-word 
-from temp_1 
-lateral view explode(words) dummy as word;
-
-CREATE EXTERNAL TABLE dictionary (
-    type string,
-    length int,
-    word string,
-    pos string,
-    stemmed string,
-    polarity string
+CREATE EXTERNAL TABLE IF NOT EXISTS covid_sentiment_summary
+(
+id BIGINT,
+tweet STRING,
+positive_words INT,
+negative_words INT
 )
-ROW FORMAT DELIMITED FIELDS TERMINATED BY '	'
-STORED AS TEXTFILE
-LOCATION '/user/maria_dev/dictionary';
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY ',';
 
-load data inpath '/user/maria_dev/dictionary.tsv' into TABLE dictionary;
-
-create view temp_3 as select
-id,
-temp_2.tweet,
-temp_2.word,
-case s_d.polarity
-            when  'negative' then -1
-            when 'positive' then 1
-            else 0 
-end as polarity
-from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
-
--- Creating a summary view to check the total positive and negative words in each tweet
-create view tweet_sentiment_summary as
+insert overwrite table covid_sentiment_summary
 select
 id,
 tweet,
@@ -123,4 +92,4 @@ from temp_3
 group by id, tweet;
 
 -- Checking the sentiment summary result
-SELECT * FROM tweet_sentiment_summary limit 25;
+SELECT * FROM covid_sentiment_summary limit 25;
