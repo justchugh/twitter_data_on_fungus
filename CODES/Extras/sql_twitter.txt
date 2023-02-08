@@ -58,6 +58,19 @@ else 0
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
 
+-- Trying a different approach for sentiment aggregation
+create view sentiment_aggregation as 
+select
+id,
+tweet,
+count(distinct case when polarity = 1 then word else null end) as distinct_positive_words,
+count(distinct case when polarity = -1 then word else null end) as distinct_negative_words
+from temp_3
+group by id, tweet;
+
+-- Checking the sentiment aggregation result
+SELECT * FROM sentiment_aggregation limit 25;
+
 CREATE EXTERNAL TABLE covid_tweets
 (
 id BIGINT,    
@@ -72,24 +85,45 @@ retweet_count INT,
 tweet_date STRING
 );
 
-CREATE EXTERNAL TABLE IF NOT EXISTS covid_sentiment_summary
-(
-id BIGINT,
-tweet STRING,
-positive_words INT,
-negative_words INT
-)
-ROW FORMAT DELIMITED 
-FIELDS TERMINATED BY ',';
-
-insert overwrite table covid_sentiment_summary
-select
+create view temp_1 as 
+select 
 id,
-tweet,
-sum(case when polarity = 1 then 1 else 0 end) as positive_words,
-sum(case when polarity = -1 then 1 else 0 end) as negative_words
-from temp_3
-group by id, tweet;
+covid_tweets_exp.tweet,
+words 
+from covid_tweets_exp 
+lateral view explode(sentences(lower(tweet))) dummy as words;
 
--- Checking the sentiment summary result
-SELECT * FROM covid_sentiment_summary limit 25;
+create view temp_2 as select 
+id,
+temp_1.tweet, 
+word 
+from temp_1 
+lateral view explode(words) dummy as word;
+
+CREATE EXTERNAL TABLE dictionary (
+    type string,
+    length int,
+    word string,
+    pos string,
+    stemmed string,
+    polarity string
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '	'
+STORED AS TEXTFILE
+LOCATION '/user/maria_dev/dictionary';
+
+load data inpath '/user/maria_dev/dictionary.tsv' into TABLE dictionary;
+
+create view temp_3 as select
+id,
+temp_2.tweet,
+temp_2.word,
+case s_d.polarity
+            when  'negative' then -1
+            when 'positive' then 1
+            else 0 
+end as polarity
+from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
+
+-- Checking the sentiment analysis result
+SELECT * FROM temp_3 limit 25;
