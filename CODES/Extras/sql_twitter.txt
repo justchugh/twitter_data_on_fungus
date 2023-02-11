@@ -58,14 +58,14 @@ else 0
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
 
--- Creating a simplified sentiment summary
-create view simplified_sentiment_summary as
+-- Trying a different approach with normalized sentiment score
+create view normalized_sentiment as 
 select
 id,
 tweet,
-sum(polarity) as sentiment_score
+sum(polarity) / count(word) as normalized_sentiment_score
 from temp_3
 group by id, tweet;
 
--- Checking the simplified sentiment summary result
-SELECT * FROM simplified_sentiment_summary limit 25;
+-- Checking the normalized sentiment result
+SELECT * FROM normalized_sentiment limit 25;
