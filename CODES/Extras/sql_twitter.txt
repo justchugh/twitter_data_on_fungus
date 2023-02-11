@@ -32,39 +32,3 @@ from temp_1
 lateral view explode(words) dummy as word;
 
 SELECT * FROM temp_2 limit 25;
-
-CREATE EXTERNAL TABLE dictionary 
-(
-    type string,
-    length int,
-    word string,
-    pos string,
-    stemmed string,
-    polarity string
-)
-ROW FORMAT DELIMITED 
-FIELDS TERMINATED BY '	';
-
-load data inpath '/bda/twitter/dictionary.tsv' into TABLE dictionary;
-
-create view temp_3 as select
-id,
-temp_2.tweet,
-temp_2.word,
-case s_d.polarity 
-when 'negative' then -1 
-when 'positive' then 1 
-else 0 
-end as polarity
-from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
-
--- Creating a simple view for tweets with positive sentiment
-create view positive_tweets as
-select
-id,
-tweet
-from temp_3
-where polarity = 1;
-
--- Checking the positive tweets result
-SELECT * FROM positive_tweets limit 25;
