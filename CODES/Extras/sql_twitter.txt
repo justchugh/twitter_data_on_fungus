@@ -58,14 +58,13 @@ else 0
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
 
--- Trying a different approach with normalized sentiment score
-create view normalized_sentiment as 
+-- Creating a simple view for tweets with positive sentiment
+create view positive_tweets as
 select
 id,
-tweet,
-sum(polarity) / count(word) as normalized_sentiment_score
+tweet
 from temp_3
-group by id, tweet;
+where polarity = 1;
 
--- Checking the normalized sentiment result
-SELECT * FROM normalized_sentiment limit 25;
+-- Checking the positive tweets result
+SELECT * FROM positive_tweets limit 25;
