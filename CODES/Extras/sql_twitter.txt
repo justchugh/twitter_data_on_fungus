@@ -58,72 +58,14 @@ else 0
 end as polarity
 from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
 
--- Trying a different approach with sentiment weighting
-create view sentiment_weighting as 
+-- Creating a simplified sentiment summary
+create view simplified_sentiment_summary as
 select
 id,
 tweet,
-sum(case when polarity = 1 then 2 else 0 end) as weighted_positive_words,
-sum(case when polarity = -1 then -2 else 0 end) as weighted_negative_words
+sum(polarity) as sentiment_score
 from temp_3
 group by id, tweet;
 
--- Checking the sentiment weighting result
-SELECT * FROM sentiment_weighting limit 25;
-
-CREATE EXTERNAL TABLE covid_tweets
-(
-id BIGINT,    
-tweet STRING,    
-user_name STRING,
-user_statuses_count INT,
-user_followers_count INT,
-user_location STRING,
-user_verified BOOLEAN,
-tweet_fav_count INT,
-retweet_count INT,
-tweet_date STRING
-);
-
-create view temp_1 as 
-select 
-id,
-covid_tweets_exp.tweet,
-words 
-from covid_tweets_exp 
-lateral view explode(sentences(lower(tweet))) dummy as words;
-
-create view temp_2 as select 
-id,
-temp_1.tweet, 
-word 
-from temp_1 
-lateral view explode(words) dummy as word;
-
-CREATE EXTERNAL TABLE dictionary (
-    type string,
-    length int,
-    word string,
-    pos string,
-    stemmed string,
-    polarity string
-)
-ROW FORMAT DELIMITED FIELDS TERMINATED BY '	'
-STORED AS TEXTFILE
-LOCATION '/user/maria_dev/dictionary';
-
-load data inpath '/user/maria_dev/dictionary.tsv' into TABLE dictionary;
-
-create view temp_3 as select
-id,
-temp_2.tweet,
-temp_2.word,
-case s_d.polarity
-            when  'negative' then -1
-            when 'positive' then 1
-            else 0 
-end as polarity
-from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
-
--- Checking the sentiment analysis result
-SELECT * FROM temp_3 limit 25;
+-- Checking the simplified sentiment summary result
+SELECT * FROM simplified_sentiment_summary limit 25;
