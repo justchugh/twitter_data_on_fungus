@@ -1,8 +1,7 @@
-
 CREATE EXTERNAL TABLE IF NOT EXISTS covid_tweets_exp
 (
-id BIGINT,    
-tweet STRING,    
+id BIGINT,	
+tweet STRING,	
 user_name STRING,
 user_statuses_count INT,
 user_followers_count INT,
@@ -12,10 +11,15 @@ tweet_fav_count INT,
 retweet_count INT,
 tweet_date STRING
 )
+
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ',';
 
+
 load data inpath '/bda/twitter/final_white_plus_yellow_final.csv' into TABLE covid_tweets_exp;
+
+
+____________________________________________________________________________________________________________
 
 create view temp_1 as select 
 id,
@@ -24,6 +28,11 @@ words
 from covid_tweets_exp 
 lateral view explode(sentences(lower(tweet))) dummy as words;
 
+//VIEW temp_1
+
+//id		text		words
+
+
 create view temp_2 as select 
 id,
 temp_1.tweet, 
@@ -31,4 +40,164 @@ word
 from temp_1 
 lateral view explode(words) dummy as word;
 
+
+//VIEW temp_2
+
+//id		text		words
+
+
+
 SELECT * FROM temp_2 limit 25;
+
+____________________________________________________________________________________________________________
+
+
+CREATE EXTERNAL TABLE dictionary 
+(
+    type string,
+    length int,
+    word string,
+    pos string,
+    stemmed string,
+    polarity string
+)
+
+ROW FORMAT DELIMITED 
+FIELDS TERMINATED BY '\t';
+
+
+load data inpath '/bda/twitter/dictionary.tsv' into TABLE dictionary;
+
+
+____________________________________________________________________________________________________________
+
+
+
+create view temp_3 as select
+id,
+temp_2.tweet,
+temp_2.word,
+case s_d.polarity 
+when 'negative' then -1 
+when 'positive' then 1 
+else 0 
+end as polarity
+from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
+
+
+
+____________________________________________________________________________________________________________
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+____________________________________________________________________________________________________________
+
+CREATE EXTERNAL TABLE covid_tweets
+(
+id BIGINT,	
+tweet STRING,	
+user_name:STRING,
+user_statuses_count:INT,
+user_followers_count:INT,
+user_location:STRING,
+user_verified:BOOLEAN,
+tweet_fav_count:INT,
+retweet_count:INT,
+tweet_date STRING
+)
+
+____________________________________________________________________________________________________________
+
+
+//Divide text into words.
+create view temp_1 as 
+select 
+id,
+covid_tweets_exp.tweet,
+words 
+from covid_tweets_exp 
+lateral view explode(sentences(lower(text))) dummy as words;
+
+//VIEW temp_1
+
+//id		text		words
+
+
+
+//Divide words into single word row.
+
+create view temp_2 as select 
+id,
+temp_1.tweet, 
+word 
+from temp_1 
+lateral view explode(words) dummy as word;
+
+//VIEW temp_2
+
+//id		text		words
+
+____________________________________________________________________________________________________________
+
+
+
+//Now we import our Dicyinary file as well.
+CREATE EXTERNAL TABLE dictionary (
+    type string,
+    length int,
+    word string,
+    pos string,
+    stemmed string,
+    polarity string
+)
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'
+STORED AS TEXTFILE
+LOCATION '/user/maria_dev/dictionary';
+
+//load dictionary file into the table:
+load data inpath '/user/maria_dev/dictinary.tsv' into TABLE covid_raw_tweets;
+
+
+____________________________________________________________________________________________________________
+
+
+create view temp_3 as select
+id,
+temp_2.text,
+temp_2.word,
+case s_d.polarity
+			when  'negative' then -1
+			when 'positive' then 1
+			else 0 
+end as polarity
+from temp_2 left outer join dictionary s_d on temp_2.word = s_d.word;
+
